@@ -7,15 +7,38 @@ import { AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 // Fungsi untuk membaca dan parse CSV
 function parseCSV(text) {
   const lines = text.split('\n').filter(line => line.trim());
+  /*
+    [
+    "nama,umur,kota",
+    "Andi,20,Yogyakarta",
+    "Budi,22,Jakarta"
+    ]
+    */
   const headers = lines[0].split(',').map(h => h.trim());
+  /*
+  ["nama", "umur", "kota"]
+    */
   
   const data = lines.slice(1).map((line, index) => {
     const values = line.split(',');
+    /*
+    "Andi,20,Yogyakarta"
+    ["Andi", "20", "Yogyakarta"]
+    */
+
     const obj = { _rawLineNumber: index + 2 };
     
     headers.forEach((header, idx) => {
       obj[header] = values[idx]?.trim() || '';
     });
+    /*
+    {
+      nama: "Andi",
+      umur: "20",
+      kota: "Yogyakarta",
+      _rawLineNumber: 2
+    }
+    */
     
     return obj;
   });
@@ -65,6 +88,20 @@ function identifyDataIssues(rawData) {
       });
     }
   });
+  /*
+  [
+  {
+    lineNumber: 5,
+    transactionId: "TRX-001",
+    product: "Beras",
+    region: "DIY",
+    problems: [
+      "quantity kosong",
+      "kemungkinan kesalahan perhitungan"
+    ]
+  }
+]
+    */
   
   return issues;
 }
@@ -80,6 +117,9 @@ function cleanData(rawData) {
       const parts = date.split('-');
       date = `2024-${parts[1]}-${parts[0]}`;
     }
+    /*
+    "27-01-2024" => "2024-01-27"
+    */
     
     const quantity = parseFloat(row.quantity) || 0;
     const price = parseFloat(row.price_per_unit) || 0;
@@ -108,10 +148,22 @@ function cleanData(rawData) {
   
   return { cleaned, skipped };
 }
+/*
+{
+  cleaned: [ ...data siap pakai... ],
+  skipped: [ ...data yang dibuang... ]
+}
+*/
 
 // Analisis: Top 5 Produk
 function getTopProducts(data) {
   const productSales = {};
+  /*
+  {
+  "Beras": 5000000,
+  "Gula": 3000000
+}
+*/
   
   data.forEach(row => {
     if (!productSales[row.product_name]) {
@@ -125,6 +177,13 @@ function getTopProducts(data) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 }
+/*
+[
+  { name: "Beras", total: 5000000 },
+  { name: "Gula", total: 4200000 },
+  ...
+]
+*/
 
 // Analisis: Penjualan per Wilayah
 function getSalesByRegion(data) {
@@ -136,6 +195,12 @@ function getSalesByRegion(data) {
     }
     regionSales[row.region_name] += row.total_price;
   });
+  /*
+  [
+  { name: "DIY", total: 8000000 },
+  { name: "Jawa Tengah", total: 6000000 }
+]
+*/
   
   return Object.entries(regionSales)
     .map(([name, total]) => ({ name, total: Math.round(total) }))
@@ -164,8 +229,21 @@ function getSalesByMonth(data) {
       total: Math.round(monthlySales[month])
     }));
 }
+/*
+[
+  { month: "Jan", total: 1200000 },
+  { month: "Feb", total: 1500000 }
+]
+*/
 
 // Analisis: Produk per Bulan
+/*
+productMonthly = {
+  "Beras": { Jan: 1000000, Feb: 1200000 },
+  "Gula": { Jan: 800000 }
+}
+  struktur data bertingkat
+*/
 function getProductSalesByMonth(data) {
   const productMonthly = {};
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
@@ -178,11 +256,23 @@ function getProductSalesByMonth(data) {
     if (!productMonthly[product]) {
       productMonthly[product] = {};
     }
+    /*
+    productMonthly["Beras"] = {}
+    */
     if (!productMonthly[product][monthKey]) {
       productMonthly[product][monthKey] = 0;
     }
+    /*
+    productMonthly["Beras"]["Jan"] = 0
+    */
     productMonthly[product][monthKey] += row.total_price;
   });
+  /*
+  {
+  "Beras": { "Jan": 1000000, "Feb": 1200000 },
+  "Gula": { "Jan": 500000 }
+}
+    */
   
   return monthNames.map(month => {
     const monthData = { month };
@@ -192,6 +282,12 @@ function getProductSalesByMonth(data) {
     return monthData;
   });
 }
+/*
+[
+  { month: 'Jan', Beras: 1000000, Gula: 500000 },
+  { month: 'Feb', Beras: 1200000, Gula: 0 }
+]
+*/
 
 // Format angka ke Juta atau Ribu
 function formatRupiah(value, decimals = 1) {
